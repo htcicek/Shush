@@ -31,8 +31,19 @@ final class ApplicationController: NSObject {
     }
 
     func start() {
-        statusItem.button?.toolTip = "Shush"
-        statusItem.button?.imagePosition = .imageLeading
+        statusItem.length = NSStatusItem.variableLength
+        statusItem.isVisible = true
+        if let button = statusItem.button {
+            let image = NSImage(
+                systemSymbolName: "mic.badge.xmark",
+                accessibilityDescription: "Shush is starting"
+            )
+            image?.isTemplate = true
+            button.image = image
+            button.title = " Shush"
+            button.toolTip = "Shush is starting"
+            button.imagePosition = .imageLeading
+        }
 
         keyboardMonitor.onShortcutEvent = { [weak self] phase in
             Task { @MainActor in
@@ -158,10 +169,10 @@ final class ApplicationController: NSObject {
         pushToTalkItem.state = shortcutMode == .pushToTalk ? .on : .off
         menu.addItem(pushToTalkItem)
 
-        if !keyboardMonitor.hasAccessibilityPermission {
+        if !keyboardMonitor.isShortcutActive {
             menu.addItem(.separator())
             let permissionStatus = NSMenuItem(
-                title: "F5 shortcut needs Accessibility access",
+                title: "F5 shortcut is not active",
                 action: nil,
                 keyEquivalent: ""
             )
@@ -175,6 +186,14 @@ final class ApplicationController: NSObject {
             )
             settingsItem.target = self
             menu.addItem(settingsItem)
+
+            let inputSettingsItem = NSMenuItem(
+                title: "Open Input Monitoring Settings…",
+                action: #selector(openInputMonitoringSettings),
+                keyEquivalent: ""
+            )
+            inputSettingsItem.target = self
+            menu.addItem(inputSettingsItem)
         }
 
         menu.addItem(.separator())
@@ -233,28 +252,50 @@ final class ApplicationController: NSObject {
     }
 
     @objc private func openAccessibilitySettings() {
-        keyboardMonitor.requestAccessibilityPermission()
+        keyboardMonitor.requestShortcutPermissions()
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
             return
         }
         NSWorkspace.shared.open(url)
     }
 
+    @objc private func openInputMonitoringSettings() {
+        keyboardMonitor.requestShortcutPermissions()
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    @objc private func openMenuBarSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     private func showPermissionGuidanceIfNeeded() {
-        guard !keyboardMonitor.hasAccessibilityPermission, !hasShownPermissionGuidance else { return }
+        guard !keyboardMonitor.isShortcutActive, !hasShownPermissionGuidance else { return }
         hasShownPermissionGuidance = true
 
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = "Allow Shush to use the F5 key"
-        alert.informativeText = "Shush needs Accessibility access to intercept F5 system-wide and prevent Dictation from opening. It does not record or store your keystrokes."
-        alert.addButton(withTitle: "Open Accessibility Settings")
-        alert.addButton(withTitle: "Not Now")
+        alert.icon = NSApp.applicationIconImage
+        alert.alertStyle = .warning
+        alert.messageText = "Shush needs setup"
+        alert.informativeText = "The F5/Dictation shortcut is not active. Enable Shush in Accessibility and Input Monitoring. If Shush is missing from the menu bar, enable it in System Settings → Menu Bar."
+        alert.addButton(withTitle: "Open Accessibility")
+        alert.addButton(withTitle: "Open Menu Bar Settings")
+        alert.addButton(withTitle: "Later")
 
-        if alert.runModal() == .alertFirstButtonReturn {
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
             openAccessibilitySettings()
+        } else if response == .alertSecondButtonReturn {
+            openMenuBarSettings()
         }
+        NSApp.setActivationPolicy(.accessory)
     }
 
     @objc private func quit() {

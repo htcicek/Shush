@@ -39,14 +39,20 @@ final class KeyboardMonitor {
     var onPermissionChanged: ((Bool) -> Void)?
 
     private(set) var hasAccessibilityPermission = false
+    private(set) var hasInputMonitoringPermission = false
+    var isShortcutActive: Bool {
+        guard let eventTap else { return false }
+        return CGEvent.tapIsEnabled(tap: eventTap)
+    }
+
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var permissionTimer: Timer?
 
     func start(promptForPermission: Bool) {
         updatePermissionState()
-        if !hasAccessibilityPermission && promptForPermission {
-            requestAccessibilityPermission()
+        if promptForPermission {
+            requestShortcutPermissions()
         }
         installEventTapIfPossible()
 
@@ -71,16 +77,23 @@ final class KeyboardMonitor {
         eventTap = nil
     }
 
-    func requestAccessibilityPermission() {
+    func requestShortcutPermissions() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
+        _ = CGRequestListenEventAccess()
     }
 
     private func updatePermissionState() {
-        let trusted = AXIsProcessTrusted()
-        guard trusted != hasAccessibilityPermission else { return }
-        hasAccessibilityPermission = trusted
-        onPermissionChanged?(trusted)
+        let accessibility = AXIsProcessTrusted()
+        let inputMonitoring = CGPreflightListenEventAccess()
+        let changed = accessibility != hasAccessibilityPermission
+            || inputMonitoring != hasInputMonitoringPermission
+
+        hasAccessibilityPermission = accessibility
+        hasInputMonitoringPermission = inputMonitoring
+        if changed {
+            onPermissionChanged?(isShortcutActive)
+        }
     }
 
     private func installEventTapIfPossible() {
@@ -108,6 +121,7 @@ final class KeyboardMonitor {
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        onPermissionChanged?(isShortcutActive)
     }
 
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {

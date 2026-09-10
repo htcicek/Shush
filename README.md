@@ -27,7 +27,9 @@ Or run from Xcode:
 
 1. Open `Shush.xcodeproj` in Xcode.
 2. Select the **Shush** scheme and run it.
-3. Grant Shush access in **System Settings → Privacy & Security → Accessibility** when prompted. This permission lets Shush intercept the key globally and prevent Dictation from opening.
+3. Grant Shush access in **System Settings → Privacy & Security → Accessibility** and **Input Monitoring** when prompted. These permissions let Shush intercept the key globally and prevent Dictation from opening.
+
+On macOS 26, menu-bar apps can also be hidden by the system. If Shush is running but absent from the menu bar, open **System Settings → Menu Bar** and enable Shush.
 
 The menu-bar icon shows the current state:
 
