@@ -4,7 +4,7 @@ import AppKit
 final class ApplicationController: NSObject {
     private let audioController = AudioInputController()
     private let keyboardMonitor = KeyboardMonitor()
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
     private var refreshTimer: Timer?
     private var snapshot = AudioInputSnapshot.unavailable(message: "Checking microphone…")
@@ -13,6 +13,7 @@ final class ApplicationController: NSObject {
 
     func start() {
         statusItem.button?.toolTip = "Shush"
+        statusItem.button?.imagePosition = .imageLeading
 
         keyboardMonitor.onToggle = { [weak self] in
             Task { @MainActor in
@@ -71,6 +72,7 @@ final class ApplicationController: NSObject {
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
         image?.isTemplate = true
         button.image = image
+        button.title = " Shush"
         button.toolTip = "Shush — \(description)"
     }
 
