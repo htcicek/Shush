@@ -15,6 +15,16 @@ It uses only Apple frameworks:
 
 ## Build and run
 
+For a complete release build, local install, and restart:
+
+```sh
+./build.sh
+```
+
+The script builds into `.build`, applies a local ad-hoc signature, installs the result at `/Applications/Shush.app`, refreshes its Launch Services icon registration, and launches it. It does not reset Accessibility permission.
+
+Or run from Xcode:
+
 1. Open `Shush.xcodeproj` in Xcode.
 2. Select the **Shush** scheme and run it.
 3. Grant Shush access in **System Settings → Privacy & Security → Accessibility** when prompted. This permission lets Shush intercept the key globally and prevent Dictation from opening.
