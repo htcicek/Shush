@@ -9,6 +9,7 @@ final class ApplicationController: NSObject {
     private var refreshTimer: Timer?
     private var snapshot = AudioInputSnapshot.unavailable(message: "Checking microphone…")
     private var lastError: String?
+    private var hasShownPermissionGuidance = false
 
     func start() {
         statusItem.button?.toolTip = "Shush"
@@ -24,6 +25,12 @@ final class ApplicationController: NSObject {
             }
         }
         keyboardMonitor.start(promptForPermission: true)
+
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.showPermissionGuidanceIfNeeded()
+            }
+        }
 
         refresh()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
@@ -148,6 +155,23 @@ final class ApplicationController: NSObject {
             return
         }
         NSWorkspace.shared.open(url)
+    }
+
+    private func showPermissionGuidanceIfNeeded() {
+        guard !keyboardMonitor.hasAccessibilityPermission, !hasShownPermissionGuidance else { return }
+        hasShownPermissionGuidance = true
+
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Allow Shush to use the F5 key"
+        alert.informativeText = "Shush needs Accessibility access to intercept F5 system-wide and prevent Dictation from opening. It does not use this permission to read your screen or keystrokes."
+        alert.addButton(withTitle: "Open Accessibility Settings")
+        alert.addButton(withTitle: "Not Now")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            openAccessibilitySettings()
+        }
     }
 
     @objc private func quit() {
