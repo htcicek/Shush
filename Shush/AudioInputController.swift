@@ -1,13 +1,13 @@
 import CoreAudio
 import Foundation
 
-enum MicrophoneState: Equatable {
+enum MicrophoneState: Equatable, Sendable {
     case live
     case muted
     case unavailable
 }
 
-struct AudioInputSnapshot: Equatable {
+struct AudioInputSnapshot: Equatable, Sendable {
     let state: MicrophoneState
     let deviceName: String?
     let methodDescription: String?
@@ -40,6 +40,7 @@ enum AudioInputError: LocalizedError {
     }
 }
 
+@MainActor
 final class AudioInputController {
     private enum Control {
         case mute(device: AudioDeviceID, elements: [AudioObjectPropertyElement])

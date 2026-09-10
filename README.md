@@ -1,12 +1,13 @@
 # Shush
 
-Shush is a small, native macOS menu-bar app that controls the default microphone input with the F5/Dictation key.
+Shush is a small, native Swift 6 macOS menu-bar app that controls the default microphone input with the F5/Dictation key.
 
 It uses only Apple frameworks:
 
 - Core Audio to mute the default input device (with an input-gain fallback for devices that do not expose a mute control)
 - Core Graphics and Accessibility to capture the F5/Dictation key system-wide
-- AppKit for the menu-bar interface
+- SwiftUI `MenuBarExtra` for the menu-bar interface
+- AppKit for macOS setup dialogs and System Settings integration
 
 ## Requirements
 

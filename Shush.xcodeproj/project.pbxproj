@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		010000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000001 /* AppDelegate.swift */; };
-		010000000000000000000002 /* ApplicationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000002 /* ApplicationController.swift */; };
+		010000000000000000000001 /* ShushApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000001 /* ShushApp.swift */; };
+		010000000000000000000002 /* ShushModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000002 /* ShushModel.swift */; };
 		010000000000000000000003 /* AudioInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000003 /* AudioInputController.swift */; };
 		010000000000000000000004 /* KeyboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000004 /* KeyboardMonitor.swift */; };
 		010000000000000000000005 /* KeyboardEventInterpreterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000006 /* KeyboardEventInterpreterTests.swift */; };
@@ -26,8 +26,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		020000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		020000000000000000000002 /* ApplicationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationController.swift; sourceTree = "<group>"; };
+		020000000000000000000001 /* ShushApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShushApp.swift; sourceTree = "<group>"; };
+		020000000000000000000002 /* ShushModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShushModel.swift; sourceTree = "<group>"; };
 		020000000000000000000003 /* AudioInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioInputController.swift; sourceTree = "<group>"; };
 		020000000000000000000004 /* KeyboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardMonitor.swift; sourceTree = "<group>"; };
 		020000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -67,8 +67,8 @@
 		050000000000000000000002 /* Shush */ = {
 			isa = PBXGroup;
 			children = (
-				020000000000000000000001 /* AppDelegate.swift */,
-				020000000000000000000002 /* ApplicationController.swift */,
+				020000000000000000000001 /* ShushApp.swift */,
+				020000000000000000000002 /* ShushModel.swift */,
 				020000000000000000000003 /* AudioInputController.swift */,
 				020000000000000000000004 /* KeyboardMonitor.swift */,
 				020000000000000000000005 /* Info.plist */,
@@ -193,8 +193,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010000000000000000000001 /* AppDelegate.swift in Sources */,
-				010000000000000000000002 /* ApplicationController.swift in Sources */,
+				010000000000000000000001 /* ShushApp.swift in Sources */,
+				010000000000000000000002 /* ShushModel.swift in Sources */,
 				010000000000000000000003 /* AudioInputController.swift in Sources */,
 				010000000000000000000004 /* KeyboardMonitor.swift in Sources */,
 			);
@@ -350,7 +350,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.htcicek.Shush;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -373,7 +374,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.htcicek.Shush;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -386,7 +388,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.htcicek.ShushTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shush.app/Contents/MacOS/Shush";
 			};
 			name = Debug;
@@ -400,7 +403,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.htcicek.ShushTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shush.app/Contents/MacOS/Shush";
 			};
 			name = Release;

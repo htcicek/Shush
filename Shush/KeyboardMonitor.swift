@@ -1,6 +1,6 @@
 import AppKit
 import ApplicationServices
-import CoreGraphics
+@preconcurrency import CoreGraphics
 
 struct KeyboardEventInterpreter {
     static let f5KeyCode: Int64 = 96
@@ -29,14 +29,15 @@ struct KeyboardEventInterpreter {
     }
 }
 
+@MainActor
 final class KeyboardMonitor {
-    enum ShortcutPhase {
+    enum ShortcutPhase: Sendable {
         case pressed
         case released
     }
 
-    var onShortcutEvent: ((ShortcutPhase) -> Void)?
-    var onPermissionChanged: ((Bool) -> Void)?
+    var onShortcutEvent: (@MainActor (ShortcutPhase) -> Void)?
+    var onPermissionChanged: (@MainActor (Bool) -> Void)?
 
     private(set) var hasAccessibilityPermission = false
     private(set) var hasInputMonitoringPermission = false
@@ -47,7 +48,7 @@ final class KeyboardMonitor {
 
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var permissionTimer: Timer?
+    private var permissionTask: Task<Void, Never>?
 
     func start(promptForPermission: Bool) {
         updatePermissionState()
@@ -56,16 +57,19 @@ final class KeyboardMonitor {
         }
         installEventTapIfPossible()
 
-        permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            self.updatePermissionState()
-            self.installEventTapIfPossible()
+        permissionTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                self?.updatePermissionState()
+                self?.installEventTapIfPossible()
+            }
         }
     }
 
     func stop() {
-        permissionTimer?.invalidate()
-        permissionTimer = nil
+        permissionTask?.cancel()
+        permissionTask = nil
 
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
@@ -78,7 +82,7 @@ final class KeyboardMonitor {
     }
 
     func requestShortcutPermissions() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
         _ = CGRequestListenEventAccess()
     }
@@ -124,7 +128,13 @@ final class KeyboardMonitor {
         onPermissionChanged?(isShortcutActive)
     }
 
-    fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    nonisolated fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        MainActor.assumeIsolated {
+            handleOnMainActor(type: type, event: event)
+        }
+    }
+
+    private func handleOnMainActor(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             onShortcutEvent?(.released)
             if let eventTap {
