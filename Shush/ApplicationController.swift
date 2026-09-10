@@ -2,6 +2,13 @@ import AppKit
 
 @MainActor
 final class ApplicationController: NSObject {
+    private enum ShortcutMode: String {
+        case toggle
+        case pushToTalk
+    }
+
+    private static let shortcutModeDefaultsKey = "shortcutMode"
+
     private let audioController = AudioInputController()
     private let keyboardMonitor = KeyboardMonitor()
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -11,13 +18,25 @@ final class ApplicationController: NSObject {
     private var lastError: String?
     private var hasShownPermissionGuidance = false
 
+    private var shortcutMode: ShortcutMode {
+        get {
+            guard let value = UserDefaults.standard.string(forKey: Self.shortcutModeDefaultsKey) else {
+                return .toggle
+            }
+            return ShortcutMode(rawValue: value) ?? .toggle
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: Self.shortcutModeDefaultsKey)
+        }
+    }
+
     func start() {
         statusItem.button?.toolTip = "Shush"
         statusItem.button?.imagePosition = .imageLeading
 
-        keyboardMonitor.onToggle = { [weak self] in
+        keyboardMonitor.onShortcutEvent = { [weak self] phase in
             Task { @MainActor in
-                self?.toggleMute()
+                self?.handleShortcut(phase)
             }
         }
         keyboardMonitor.onPermissionChanged = { [weak self] _ in
@@ -33,7 +52,11 @@ final class ApplicationController: NSObject {
             }
         }
 
-        refresh()
+        if shortcutMode == .pushToTalk {
+            setMicrophoneMuted(true)
+        } else {
+            refresh()
+        }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
@@ -103,11 +126,37 @@ final class ApplicationController: NSObject {
 
         menu.addItem(.separator())
 
-        let toggleTitle = snapshot.state == .muted ? "Unmute Microphone" : "Mute Microphone"
+        let toggleTitle = shortcutMode == .pushToTalk
+            ? "Hold F5 to Talk"
+            : (snapshot.state == .muted ? "Unmute Microphone" : "Mute Microphone")
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleMuteFromMenu), keyEquivalent: "")
         toggleItem.target = self
-        toggleItem.isEnabled = snapshot.state != .unavailable
+        toggleItem.isEnabled = snapshot.state != .unavailable && shortcutMode == .toggle
         menu.addItem(toggleItem)
+
+        menu.addItem(.separator())
+
+        let modeLabel = NSMenuItem(title: "Dictation Key Mode", action: nil, keyEquivalent: "")
+        modeLabel.isEnabled = false
+        menu.addItem(modeLabel)
+
+        let toggleModeItem = NSMenuItem(
+            title: "Toggle",
+            action: #selector(selectToggleMode),
+            keyEquivalent: ""
+        )
+        toggleModeItem.target = self
+        toggleModeItem.state = shortcutMode == .toggle ? .on : .off
+        menu.addItem(toggleModeItem)
+
+        let pushToTalkItem = NSMenuItem(
+            title: "Push to Talk (Hold F5)",
+            action: #selector(selectPushToTalkMode),
+            keyEquivalent: ""
+        )
+        pushToTalkItem.target = self
+        pushToTalkItem.state = shortcutMode == .pushToTalk ? .on : .off
+        menu.addItem(pushToTalkItem)
 
         if !keyboardMonitor.hasAccessibilityPermission {
             menu.addItem(.separator())
@@ -151,6 +200,38 @@ final class ApplicationController: NSObject {
         refresh()
     }
 
+    private func setMicrophoneMuted(_ muted: Bool) {
+        do {
+            try audioController.setMuted(muted)
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+            NSSound.beep()
+        }
+        refresh()
+    }
+
+    private func handleShortcut(_ phase: KeyboardMonitor.ShortcutPhase) {
+        switch shortcutMode {
+        case .toggle:
+            if phase == .pressed {
+                toggleMute()
+            }
+        case .pushToTalk:
+            setMicrophoneMuted(phase == .released)
+        }
+    }
+
+    @objc private func selectToggleMode() {
+        shortcutMode = .toggle
+        updateMenu()
+    }
+
+    @objc private func selectPushToTalkMode() {
+        shortcutMode = .pushToTalk
+        setMicrophoneMuted(true)
+    }
+
     @objc private func openAccessibilitySettings() {
         keyboardMonitor.requestAccessibilityPermission()
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
@@ -167,7 +248,7 @@ final class ApplicationController: NSObject {
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = "Allow Shush to use the F5 key"
-        alert.informativeText = "Shush needs Accessibility access to intercept F5 system-wide and prevent Dictation from opening. It does not use this permission to read your screen or keystrokes."
+        alert.informativeText = "Shush needs Accessibility access to intercept F5 system-wide and prevent Dictation from opening. It does not record or store your keystrokes."
         alert.addButton(withTitle: "Open Accessibility Settings")
         alert.addButton(withTitle: "Not Now")
 

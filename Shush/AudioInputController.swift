@@ -83,6 +83,18 @@ final class AudioInputController {
         }
     }
 
+    func setMuted(_ shouldMute: Bool) throws {
+        let device = try defaultInputDevice()
+        let control = try control(for: device)
+        guard try isMuted(control) != shouldMute else { return }
+
+        if shouldMute {
+            try mute(control)
+        } else {
+            try unmute(control)
+        }
+    }
+
     private func methodDescription(for control: Control) -> String {
         switch control {
         case .mute:

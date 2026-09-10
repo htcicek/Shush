@@ -1,6 +1,6 @@
 # Shush
 
-Shush is a small, native macOS menu-bar app that toggles the default microphone input with the F5/Dictation key.
+Shush is a small, native macOS menu-bar app that controls the default microphone input with the F5/Dictation key.
 
 It uses only Apple frameworks:
 
@@ -24,6 +24,13 @@ The menu-bar icon shows the current state:
 - `mic.fill`: microphone is live
 - `mic.slash.fill`: microphone is muted
 - `mic.badge.xmark`: the current input device cannot be controlled
+
+The **Dictation Key Mode** section of the menu offers two behaviors:
+
+- **Toggle**: press F5 once to mute or unmute.
+- **Push to Talk**: the microphone is muted by default, unmuted while F5 is held, and muted again when the key is released.
+
+The selected mode is remembered between launches. Selecting **Push to Talk** immediately mutes the microphone, including when Shush launches in that mode.
 
 Shush first uses the device's Core Audio mute property. If a device does not expose one, Shush stores its current input gain and temporarily sets the gain to zero. The stored gain is restored when unmuting.
 

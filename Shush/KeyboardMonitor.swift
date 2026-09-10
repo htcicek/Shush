@@ -21,10 +21,21 @@ struct KeyboardEventInterpreter {
         let isRepeat = (keyFlags & 0x1) != 0
         return keyState == 0xA && !isRepeat
     }
+
+    static func isSystemKeyUp(data1: Int64) -> Bool {
+        let keyFlags = Int(data1 & 0x0000_FFFF)
+        let keyState = (keyFlags & 0xFF00) >> 8
+        return keyState == 0xB
+    }
 }
 
 final class KeyboardMonitor {
-    var onToggle: (() -> Void)?
+    enum ShortcutPhase {
+        case pressed
+        case released
+    }
+
+    var onShortcutEvent: ((ShortcutPhase) -> Void)?
     var onPermissionChanged: ((Bool) -> Void)?
 
     private(set) var hasAccessibilityPermission = false
@@ -101,6 +112,7 @@ final class KeyboardMonitor {
 
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            onShortcutEvent?(.released)
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
@@ -114,7 +126,9 @@ final class KeyboardMonitor {
             }
 
             if type == .keyDown && event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
-                onToggle?()
+                onShortcutEvent?(.pressed)
+            } else if type == .keyUp {
+                onShortcutEvent?(.released)
             }
             return nil
         }
@@ -126,7 +140,9 @@ final class KeyboardMonitor {
             }
 
             if KeyboardEventInterpreter.isSystemKeyDown(data1: data1) {
-                onToggle?()
+                onShortcutEvent?(.pressed)
+            } else if KeyboardEventInterpreter.isSystemKeyUp(data1: data1) {
+                onShortcutEvent?(.released)
             }
             return nil
         }
