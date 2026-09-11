@@ -13,7 +13,7 @@ enum ShortcutMode: String, CaseIterable, Identifiable, Sendable {
         case .toggle:
             return "Toggle"
         case .pushToTalk:
-            return "Push to Talk (Hold F5)"
+            return "Push to Talk"
         }
     }
 }
@@ -26,7 +26,7 @@ final class ShushModel: ObservableObject {
     @Published private(set) var snapshot = AudioInputSnapshot.unavailable(message: "Checking microphone…")
     @Published private(set) var lastError: String?
     @Published private(set) var shortcutStatus = KeyboardMonitor.Status.needsAccessibility
-    @Published private(set) var lastKeyboardEvent = "No F5/Dictation event observed"
+    @Published private(set) var lastKeyboardEvent = "No Dictation key event observed"
     @Published var isDebugModeEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isDebugModeEnabled, forKey: Self.debugModeDefaultsKey)
@@ -95,7 +95,7 @@ final class ShushModel: ObservableObject {
 
     var manualControlTitle: String {
         if shortcutMode == .pushToTalk {
-            return "Hold F5 to Talk"
+            return "Hold Dictation Key to Talk"
         }
         return snapshot.state == .muted ? "Unmute Microphone" : "Mute Microphone"
     }
@@ -219,17 +219,16 @@ struct ShushMenu: View {
         }
         .disabled(!model.canToggleManually)
 
-        Text("Dictation Key Mode")
-            .disabled(true)
-
-        ForEach(ShortcutMode.allCases) { mode in
-            Button {
-                model.selectShortcutMode(mode)
-            } label: {
-                if model.shortcutMode == mode {
-                    Label(mode.title, systemImage: "checkmark")
-                } else {
-                    Text(mode.title)
+        Menu("Dictation Key Mode") {
+            ForEach(ShortcutMode.allCases) { mode in
+                Button {
+                    model.selectShortcutMode(mode)
+                } label: {
+                    if model.shortcutMode == mode {
+                        Label(mode.title, systemImage: "checkmark")
+                    } else {
+                        Text(mode.title)
+                    }
                 }
             }
         }

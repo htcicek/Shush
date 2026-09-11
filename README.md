@@ -1,11 +1,11 @@
 # Shush
 
-Shush is a small, native Swift 6 macOS menu-bar app that controls the default microphone input with the F5/Dictation key.
+Shush is a small, native Swift 6 macOS menu-bar app that controls the default microphone input with the Dictation key.
 
 It uses only Apple frameworks:
 
 - Core Audio to mute the default input device (with an input-gain fallback for devices that do not expose a mute control)
-- Core Graphics and Accessibility to filter the F5/Dictation key system-wide
+- Core Graphics and Accessibility to filter the Dictation key system-wide
 - SwiftUI `MenuBarExtra` for the menu-bar interface
 - AppKit for sounds, app lifecycle actions, and System Settings integration
 
@@ -42,10 +42,12 @@ The menu-bar icon shows the current state:
 - `mic.slash.fill`: microphone is muted
 - `mic.badge.xmark`: the current input device cannot be controlled
 
-The **Dictation Key Mode** section of the menu offers two behaviors:
+The **Dictation Key Mode** submenu offers two behaviors:
 
-- **Toggle**: press F5 once to mute or unmute.
-- **Push to Talk**: the microphone is muted by default, unmuted while F5 is held, and muted again when the key is released.
+- **Toggle**: press the Dictation key once to mute or unmute.
+- **Push to Talk**: the microphone is muted by default, unmuted while the Dictation key is held, and muted again when the key is released.
+
+Only the dedicated Dictation key event is intercepted. A standard F5 keystroke continues to work normally in other applications.
 
 The selected mode is remembered between launches. Selecting **Push to Talk** immediately mutes the microphone, including when Shush launches in that mode.
 

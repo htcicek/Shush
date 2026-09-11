@@ -2,10 +2,10 @@ import XCTest
 @testable import Shush
 
 final class KeyboardEventInterpreterTests: XCTestCase {
-    func testRecognizesF5() {
-        XCTAssertTrue(KeyboardEventInterpreter.isShortcutKey(keyCode: 96))
-        XCTAssertTrue(KeyboardEventInterpreter.isShortcutKey(keyCode: 176))
-        XCTAssertFalse(KeyboardEventInterpreter.isShortcutKey(keyCode: 97))
+    func testRecognizesOnlyTheDictationKey() {
+        XCTAssertTrue(KeyboardEventInterpreter.isDictationKey(keyCode: 176))
+        XCTAssertFalse(KeyboardEventInterpreter.isDictationKey(keyCode: KeyboardEventInterpreter.standardF5KeyCode))
+        XCTAssertFalse(KeyboardEventInterpreter.isDictationKey(keyCode: 97))
     }
 
     func testRecognizesDictationSystemKey() {

@@ -4,12 +4,12 @@ import ApplicationServices
 import OSLog
 
 struct KeyboardEventInterpreter {
-    static let f5KeyCode: Int64 = 96
+    static let standardF5KeyCode: Int64 = 96
     static let macOS26DictationKeyCode: Int64 = 176
     static let legacyDictationSystemKeyCode = 0xCF
 
-    static func isShortcutKey(keyCode: Int64) -> Bool {
-        keyCode == f5KeyCode || keyCode == macOS26DictationKeyCode
+    static func isDictationKey(keyCode: Int64) -> Bool {
+        keyCode == macOS26DictationKeyCode
     }
 
     static func isLegacyDictationKey(data1: Int64) -> Bool {
@@ -48,9 +48,9 @@ final class KeyboardMonitor {
             case .needsAccessibility:
                 return "Accessibility access required"
             case .active:
-                return "F5 shortcut active"
+                return "Dictation shortcut active"
             case .eventTapUnavailable:
-                return "Could not start the F5 shortcut"
+                return "Could not start the Dictation shortcut"
             }
         }
     }
@@ -66,7 +66,7 @@ final class KeyboardMonitor {
 
     private(set) var hasAccessibilityPermission = false
     private(set) var status = Status.needsAccessibility
-    private(set) var lastDiagnosticEvent = "No F5/Dictation event observed"
+    private(set) var lastDiagnosticEvent = "No Dictation key event observed"
     private(set) var diagnosticEvents: [String] = []
 
     var isShortcutActive: Bool {
@@ -150,7 +150,7 @@ final class KeyboardMonitor {
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         publishCurrentStatus()
-        logger.info("F5 event tap started")
+        logger.info("Dictation key event tap started")
     }
 
     private func removeEventTap() {
@@ -204,13 +204,13 @@ final class KeyboardMonitor {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
             publishCurrentStatus()
-            logger.warning("F5 event tap was disabled and has been re-enabled")
+            logger.warning("Dictation key event tap was disabled and has been re-enabled")
             return Unmanaged.passUnretained(event)
         }
 
         if type == .keyDown || type == .keyUp {
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            guard KeyboardEventInterpreter.isShortcutKey(keyCode: keyCode) else {
+            guard KeyboardEventInterpreter.isDictationKey(keyCode: keyCode) else {
                 return Unmanaged.passUnretained(event)
             }
 
