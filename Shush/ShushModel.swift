@@ -21,10 +21,17 @@ enum ShortcutMode: String, CaseIterable, Identifiable, Sendable {
 @MainActor
 final class ShushModel: ObservableObject {
     private static let shortcutModeDefaultsKey = "shortcutMode"
+    private static let debugModeDefaultsKey = "debugMode"
 
     @Published private(set) var snapshot = AudioInputSnapshot.unavailable(message: "Checking microphone…")
     @Published private(set) var lastError: String?
-    @Published private(set) var isShortcutActive = false
+    @Published private(set) var shortcutStatus = KeyboardMonitor.Status.needsAccessibility
+    @Published private(set) var lastKeyboardEvent = "No F5/Dictation event observed"
+    @Published var isDebugModeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isDebugModeEnabled, forKey: Self.debugModeDefaultsKey)
+        }
+    }
     @Published var shortcutMode: ShortcutMode {
         didSet {
             UserDefaults.standard.set(shortcutMode.rawValue, forKey: Self.shortcutModeDefaultsKey)
@@ -37,19 +44,24 @@ final class ShushModel: ObservableObject {
     private let audioController = AudioInputController()
     private let keyboardMonitor = KeyboardMonitor()
     private var refreshTask: Task<Void, Never>?
-    private var hasShownPermissionGuidance = false
 
     init() {
         let storedMode = UserDefaults.standard.string(forKey: Self.shortcutModeDefaultsKey)
         shortcutMode = ShortcutMode(rawValue: storedMode ?? "") ?? .toggle
+        isDebugModeEnabled = UserDefaults.standard.bool(forKey: Self.debugModeDefaultsKey)
 
         keyboardMonitor.onShortcutEvent = { [weak self] phase in
             self?.handleShortcut(phase)
         }
-        keyboardMonitor.onPermissionChanged = { [weak self] active in
-            self?.isShortcutActive = active
+        keyboardMonitor.onStatusChanged = { [weak self] status in
+            self?.shortcutStatus = status
+        }
+        keyboardMonitor.onDiagnosticEvent = { [weak self] description in
+            self?.lastKeyboardEvent = description
         }
         keyboardMonitor.start(promptForPermission: false)
+        shortcutStatus = keyboardMonitor.status
+        lastKeyboardEvent = keyboardMonitor.lastDiagnosticEvent
 
         if shortcutMode == .pushToTalk {
             setMicrophoneMuted(true)
@@ -64,11 +76,10 @@ final class ShushModel: ObservableObject {
                 self?.refresh()
             }
         }
+    }
 
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1))
-            self?.showPermissionGuidanceIfNeeded()
-        }
+    var isShortcutActive: Bool {
+        shortcutStatus == .active
     }
 
     var statusSymbolName: String {
@@ -105,17 +116,30 @@ final class ShushModel: ObservableObject {
     }
 
     func requestShortcutPermissions() {
-        keyboardMonitor.requestShortcutPermissions()
+        keyboardMonitor.requestAccessibilityPermission()
+    }
+
+    func selectShortcutMode(_ mode: ShortcutMode) {
+        shortcutMode = mode
+    }
+
+    func copyDiagnostics() {
+        let diagnostics = """
+        Shush keyboard diagnostics
+        Shortcut status: \(shortcutStatus.description)
+        Accessibility trusted: \(keyboardMonitor.hasAccessibilityPermission)
+        Last event: \(lastKeyboardEvent)
+        Recent events:
+        \(keyboardMonitor.diagnosticEvents.map { "- \($0)" }.joined(separator: "\n"))
+        macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        """
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(diagnostics, forType: .string)
     }
 
     func openAccessibilitySettings() {
         requestShortcutPermissions()
         openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-    }
-
-    func openInputMonitoringSettings() {
-        requestShortcutPermissions()
-        openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
     }
 
     func openMenuBarSettings() {
@@ -127,8 +151,15 @@ final class ShushModel: ObservableObject {
     }
 
     private func refresh() {
-        snapshot = audioController.snapshot()
-        isShortcutActive = keyboardMonitor.isShortcutActive
+        let updatedSnapshot = audioController.snapshot()
+        if updatedSnapshot != snapshot {
+            snapshot = updatedSnapshot
+        }
+
+        let updatedShortcutStatus = keyboardMonitor.status
+        if updatedShortcutStatus != shortcutStatus {
+            shortcutStatus = updatedShortcutStatus
+        }
     }
 
     private func setMicrophoneMuted(_ muted: Bool) {
@@ -156,35 +187,6 @@ final class ShushModel: ObservableObject {
     private func openSystemSettings(_ address: String) {
         guard let url = URL(string: address) else { return }
         NSWorkspace.shared.open(url)
-    }
-
-    private func showPermissionGuidanceIfNeeded() {
-        guard !isShortcutActive, !hasShownPermissionGuidance else { return }
-        hasShownPermissionGuidance = true
-        requestShortcutPermissions()
-
-        NSApplication.shared.setActivationPolicy(.regular)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-
-        let alert = NSAlert()
-        alert.icon = NSApplication.shared.applicationIconImage
-        alert.alertStyle = .warning
-        alert.messageText = "Shush needs setup"
-        alert.informativeText = "The F5/Dictation shortcut is not active. Enable Shush in Accessibility and Input Monitoring. If Shush is missing from the menu bar, enable it in System Settings → Menu Bar."
-        alert.addButton(withTitle: "Open Accessibility")
-        alert.addButton(withTitle: "Open Menu Bar Settings")
-        alert.addButton(withTitle: "Later")
-
-        switch alert.runModal() {
-        case .alertFirstButtonReturn:
-            openAccessibilitySettings()
-        case .alertSecondButtonReturn:
-            openMenuBarSettings()
-        default:
-            break
-        }
-
-        NSApplication.shared.setActivationPolicy(.accessory)
     }
 }
 
@@ -217,24 +219,44 @@ struct ShushMenu: View {
         }
         .disabled(!model.canToggleManually)
 
-        Picker("Dictation Key Mode", selection: $model.shortcutMode) {
-            ForEach(ShortcutMode.allCases) { mode in
-                Text(mode.title).tag(mode)
+        Text("Dictation Key Mode")
+            .disabled(true)
+
+        ForEach(ShortcutMode.allCases) { mode in
+            Button {
+                model.selectShortcutMode(mode)
+            } label: {
+                if model.shortcutMode == mode {
+                    Label(mode.title, systemImage: "checkmark")
+                } else {
+                    Text(mode.title)
+                }
+            }
+        }
+
+        Divider()
+
+        Toggle("Debug Mode", isOn: $model.isDebugModeEnabled)
+
+        if model.isDebugModeEnabled {
+            Text("Keyboard: \(model.lastKeyboardEvent)")
+                .disabled(true)
+
+            Button("Copy Keyboard Diagnostics") {
+                model.copyDiagnostics()
             }
         }
 
         if !model.isShortcutActive {
             Divider()
 
-            Text("F5 shortcut is not active")
+            Text(model.shortcutStatus.description)
                 .disabled(true)
 
-            Button("Open Accessibility Settings…") {
-                model.openAccessibilitySettings()
-            }
-
-            Button("Open Input Monitoring Settings…") {
-                model.openInputMonitoringSettings()
+            if model.shortcutStatus == .needsAccessibility {
+                Button("Grant Accessibility Access…") {
+                    model.openAccessibilitySettings()
+                }
             }
 
             Button("Open Menu Bar Settings…") {

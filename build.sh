@@ -7,6 +7,7 @@ DERIVED_DATA_DIR="${PROJECT_DIR}/.build"
 BUILT_APP="${DERIVED_DATA_DIR}/Build/Products/Release/Shush.app"
 INSTALLED_APP="/Applications/Shush.app"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
+DEVELOPMENT_TEAM="${SHUSH_DEVELOPMENT_TEAM:-F8MRX4LK6K}"
 
 cd "${PROJECT_DIR}"
 
@@ -16,11 +17,11 @@ xcodebuild \
   -scheme Shush \
   -configuration Release \
   -derivedDataPath "${DERIVED_DATA_DIR}" \
-  CODE_SIGNING_ALLOWED=NO \
+  DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}" \
+  CODE_SIGN_STYLE=Automatic \
   clean build
 
-echo "Signing app bundle…"
-codesign --force --deep --options runtime --sign - "${BUILT_APP}"
+echo "Verifying app signature…"
 codesign --verify --deep --strict "${BUILT_APP}"
 
 echo "Installing ${INSTALLED_APP}…"
@@ -44,4 +45,3 @@ else
   echo "Shush did not stay running. Launch it from ${INSTALLED_APP} to see the macOS error." >&2
   exit 1
 fi
-

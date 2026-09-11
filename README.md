@@ -5,9 +5,9 @@ Shush is a small, native Swift 6 macOS menu-bar app that controls the default mi
 It uses only Apple frameworks:
 
 - Core Audio to mute the default input device (with an input-gain fallback for devices that do not expose a mute control)
-- Core Graphics and Accessibility to capture the F5/Dictation key system-wide
+- Core Graphics and Accessibility to filter the F5/Dictation key system-wide
 - SwiftUI `MenuBarExtra` for the menu-bar interface
-- AppKit for macOS setup dialogs and System Settings integration
+- AppKit for sounds, app lifecycle actions, and System Settings integration
 
 ## Requirements
 
@@ -16,21 +16,25 @@ It uses only Apple frameworks:
 
 ## Build and run
 
-For a complete release build, local install, and restart:
+Before the first build, add your Apple Account in **Xcode → Settings → Accounts**, select your team, click **Manage Certificates**, and create an **Apple Development** certificate. A stable signature is required because macOS privacy authorization is tied to the signing identity; ad-hoc signing causes Accessibility permission to break whenever the binary changes.
+
+Then run a complete release build, local install, and restart:
 
 ```sh
 ./build.sh
 ```
 
-The script builds into `.build`, applies a local ad-hoc signature, installs the result at `/Applications/Shush.app`, refreshes its Launch Services icon registration, and launches it. It does not reset Accessibility permission.
+The script builds into `.build` with Xcode-managed Apple Development signing, installs the signed result at `/Applications/Shush.app`, refreshes its Launch Services registration, and launches it. You can override the configured team with `SHUSH_DEVELOPMENT_TEAM`.
 
 Or run from Xcode:
 
 1. Open `Shush.xcodeproj` in Xcode.
 2. Select the **Shush** scheme and run it.
-3. Grant Shush access in **System Settings → Privacy & Security → Accessibility** and **Input Monitoring** when prompted. These permissions let Shush intercept the key globally and prevent Dictation from opening.
+3. Grant Shush access in **System Settings → Privacy & Security → Accessibility** so it can filter the key globally and prevent Dictation from opening. Input Monitoring is not required.
 
 On macOS 26, menu-bar apps can also be hidden by the system. If Shush is running but absent from the menu bar, open **System Settings → Menu Bar** and enable Shush.
+
+If the Dictation key is not recognized, enable **Debug Mode**, press it once, and choose **Copy Keyboard Diagnostics**. The copied report includes the raw system-key code seen by the event tap without recording any typed text.
 
 The menu-bar icon shows the current state:
 

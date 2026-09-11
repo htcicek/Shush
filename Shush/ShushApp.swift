@@ -9,10 +9,9 @@ struct ShushApplication: App {
         MenuBarExtra {
             ShushMenu(model: model)
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: model.statusSymbolName)
-                Text("Shush")
-            }
+            Image(systemName: model.statusSymbolName)
+                .accessibilityLabel("Shush: \(model.snapshot.statusText)")
+                .help("Shush: \(model.snapshot.statusText)")
         }
         .menuBarExtraStyle(.menu)
     }
